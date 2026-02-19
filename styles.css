@@ -1,0 +1,12 @@
+/* Plugin compatibility report - status colours */
+.local_plugincompatibility-compatible {
+    color: var(--success-color, #0f5132);
+    font-weight: 500;
+}
+.local_plugincompatibility-notcompatible {
+    color: var(--danger-color, #842029);
+    font-weight: 500;
+}
+.local_plugincompatibility-notfound {
+    color: var(--secondary, #6c757d);
+}

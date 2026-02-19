@@ -15,24 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin strings are defined here.
+ * Cache definitions for local_plugincompatibility (pluglist from download.moodle.org API).
  *
  * @package     local_plugincompatibility
- * @category    string
  * @copyright   2020 Raúl Martínez <raulmartinez911@hotmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['compatible'] = 'Compatible';
-$string['dependson'] = 'Dependencias';
-$string['downloadtable'] = 'Descargar en formato';
-$string['isitcompatible'] = '¿Compatible con la versión seleccionada?';
-$string['noinstalledplugins'] = 'No hay plugins externos instalados';
-$string['notcompatible'] = 'No compatible';
-$string['notfound'] = 'No encontrado en el pluglist de Moodle.org';
-$string['pluginname'] = 'Compatibilidad de plugins';
-$string['privacy:metadata'] = 'El plugin de compatibilidad de plugins no almacena datos personales. Solo obtiene datos públicos de la API de download.moodle.org.';
-$string['targetversion'] = 'Versión de Moodle a comprobar';
-$string['targetversion_help'] = 'Selecciona la versión de Moodle con la que comprobar compatibilidad. Tus plugins instalados se compararán con el pluglist de Moodle.org para esta versión.';
+$definitions = [
+    'pluglist' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'ttl' => 3600,
+        'staticacceleration' => true,
+    ],
+];

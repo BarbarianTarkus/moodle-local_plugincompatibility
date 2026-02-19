@@ -15,17 +15,25 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Privacy subsystem for local_plugincompatibility (null provider - no user data stored).
  *
  * @package     local_plugincompatibility
  * @copyright   2020 Raúl Martínez <raulmartinez911@hotmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace local_plugincompatibility\privacy;
 
-$plugin->component = 'local_plugincompatibility';
-$plugin->release = '1.0.0';
-$plugin->version = 2025021900;
-$plugin->requires = 2015111600; // Moodle 3.0 minimum version.
-$plugin->maturity = MATURITY_BETA;
+/**
+ * Privacy provider implementing null_provider (plugin does not store any user data).
+ */
+class provider implements \core_privacy\local\metadata\null_provider {
+    /**
+     * Get the language string identifier explaining why this plugin stores no data.
+     *
+     * @return string
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
+}
