@@ -83,19 +83,23 @@ $PAGE->set_heading(get_string('pluginname', 'local_plugincompatibility'));
 $data = get_installed_plugins($version);
 
 if ($dataformat) {
+    // Use literal strings for export headers to avoid any get_string() triggering
+    // debugging (and thus output) before download_data(), which would cause a coding_exception.
     $fields = [
+        'pluginname' => 'Plugin name',
         'plugin' => get_string('plugin', 'core'),
         'dependson' => get_string('dependson', 'local_plugincompatibility'),
-        'compatibility' => get_string('isitcompatible', 'local_plugincompatibility'),
+        'currentversion' => 'Current version',
+        'compatibility' => 'Compatibilidad con ' . $version,
         'pluginurl' => 'Moodle.org plugin URL',
     ];
     $notfoundstr = get_string('notfound', 'local_plugincompatibility');
     $rows = [];
     foreach ($data as $row) {
-        $component = strip_tags($row[0]);
-        $compatibilitytext = strip_tags($row[2]);
+        $component = strip_tags($row[1]);
+        $compatibilitytext = strip_tags($row[4]);
         $pluginurl = ($compatibilitytext === $notfoundstr) ? '' : LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($component);
-        $rows[] = [$component, $row[1], $compatibilitytext, $pluginurl];
+        $rows[] = [$row[0], $component, $row[2], $row[3], $compatibilitytext, $pluginurl];
     }
     $host = parse_url($CFG->wwwroot, PHP_URL_HOST);
     $host = $host ?: 'moodle';
@@ -131,12 +135,14 @@ echo $output;
 
 $table = new html_table();
 $table->head = [
+    mb_strtoupper(get_string('pluginname_column', 'local_plugincompatibility')),
     mb_strtoupper(get_string('plugin', 'core')),
     mb_strtoupper(get_string('dependson', 'local_plugincompatibility')),
-    mb_strtoupper(get_string('isitcompatible', 'local_plugincompatibility')),
+    mb_strtoupper(get_string('currentversion_column', 'local_plugincompatibility')),
+    mb_strtoupper(get_string('compatibility_with_version', 'local_plugincompatibility', $version)),
 ];
-$table->size = ['33%', '33%', '33%'];
-$table->align = ['center', 'center', 'center'];
+$table->size = ['20%', '20%', '20%', '20%', '20%'];
+$table->align = ['left', 'center', 'center', 'center', 'center'];
 $table->data = $data;
 
 echo html_writer::table($table);

@@ -37,7 +37,7 @@ const LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL = 'https://moodle.org/plu
  */
 function local_plugincompatibility_get_pluglist(): ?object {
     global $CFG;
-    
+
     // Raise memory limit before fetching/decoding the large (~15 MB) pluglist JSON.
     // The decoded PHP object tree can consume 100-200 MB; MEMORY_EXTRA gives 256 MB headroom.
     raise_memory_limit(MEMORY_EXTRA);
@@ -126,7 +126,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
  * Uses Moodle pluglist API 1.3 to determine compatibility.
  *
  * @param string $destinationversion Normalized Moodle version (e.g. "4.5") to check against.
- * @return array List of rows: [component, dependencies_string, compatibility_html].
+ * @return array List of rows: [plugin_displayname, component_cell, dependencies_string, current_version, compatibility_html].
  */
 function get_installed_plugins(string $destinationversion): array {
     $data = [];
@@ -163,7 +163,9 @@ function get_installed_plugins(string $destinationversion): array {
                     ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'local_plugincompatibility-pluginlink']
                 );
             }
-            $data[] = [$plugincell, $dependencies, $compatible];
+            $displayname = $pluginfo->displayname !== null && $pluginfo->displayname !== '' ? $pluginfo->displayname : $component;
+            $currentversion = !empty($pluginfo->release) ? $pluginfo->release : (string) ($pluginfo->versiondb ?? '');
+            $data[] = [$displayname, $plugincell, $dependencies, $currentversion, $compatible];
         }
     }
 
