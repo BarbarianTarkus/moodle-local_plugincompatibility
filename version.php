@@ -27,5 +27,5 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'local_plugincompatibility';
 $plugin->release = '0.1.0';
 $plugin->version = 2020052000.1;
-$plugin->requires = 2015111600; // Moodle 3.0 minimum version
+$plugin->requires = 2015111600; // Moodle 3.0 minimum version.
 $plugin->maturity = MATURITY_BETA;
