@@ -87,12 +87,19 @@ if ($dataformat) {
         'plugin' => get_string('plugin', 'core'),
         'dependson' => get_string('dependson', 'local_plugincompatibility'),
         'compatibility' => get_string('isitcompatible', 'local_plugincompatibility'),
+        'pluginurl' => 'Moodle.org plugin URL',
     ];
+    $notfoundstr = get_string('notfound', 'local_plugincompatibility');
     $rows = [];
     foreach ($data as $row) {
-        $rows[] = [strip_tags($row[0]), $row[1], strip_tags($row[2])];
+        $component = strip_tags($row[0]);
+        $compatibilitytext = strip_tags($row[2]);
+        $pluginurl = ($compatibilitytext === $notfoundstr) ? '' : LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($component);
+        $rows[] = [$component, $row[1], $compatibilitytext, $pluginurl];
     }
-    $filename = clean_filename('plugin_compatibility_' . $version);
+    $host = parse_url($CFG->wwwroot, PHP_URL_HOST);
+    $host = $host ?: 'moodle';
+    $filename = clean_filename($host . '-version_' . $version);
     \core\dataformat::download_data($filename, $dataformat, $fields, $rows);
     exit;
 }

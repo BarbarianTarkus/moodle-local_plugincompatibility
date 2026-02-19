@@ -22,6 +22,8 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 /** URL of the Moodle pluglist API (all plugins with supported Moodle versions). */
 const LOCAL_PLUGINCOMPATIBILITY_PLUGLIST_URL = 'https://download.moodle.org/api/1.3/pluglist.php';
 
@@ -35,7 +37,7 @@ const LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL = 'https://moodle.org/plu
  */
 function local_plugincompatibility_get_pluglist(): ?object {
     global $CFG;
-
+    
     // Raise memory limit before fetching/decoding the large (~15 MB) pluglist JSON.
     // The decoded PHP object tree can consume 100-200 MB; MEMORY_EXTRA gives 256 MB headroom.
     raise_memory_limit(MEMORY_EXTRA);

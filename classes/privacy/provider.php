@@ -24,10 +24,19 @@
 
 namespace local_plugincompatibility\privacy;
 
+<<<<<<< HEAD
+=======
+defined('MOODLE_INTERNAL') || die();
+
+>>>>>>> 0f16f66 (feat: save with name of platform and future version)
 /**
  * Privacy provider implementing null_provider (plugin does not store any user data).
  */
 class provider implements \core_privacy\local\metadata\null_provider {
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0f16f66 (feat: save with name of platform and future version)
     /**
      * Get the language string identifier explaining why this plugin stores no data.
      *

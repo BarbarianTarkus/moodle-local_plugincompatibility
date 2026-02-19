@@ -33,6 +33,10 @@ $string['noinstalledplugins'] = 'No external plugins installed';
 $string['notcompatible'] = 'Not compatible';
 $string['notfound'] = 'Not found in Moodle.org pluglist';
 $string['pluginname'] = 'Plugin compatibility';
+<<<<<<< HEAD
+=======
+$string['pluginurl'] = 'Moodle.org plugin URL';
+>>>>>>> 0f16f66 (feat: save with name of platform and future version)
 $string['privacy:metadata'] = 'The Plugin compatibility plugin does not store any personal data. It only fetches public data from download.moodle.org API.';
 $string['targetversion'] = 'Moodle version to check';
 $string['targetversion_help'] = 'Select the Moodle release to check compatibility against. Your installed plugins will be compared with the Moodle.org pluglist for this version.';
