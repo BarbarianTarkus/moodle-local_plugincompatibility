@@ -31,6 +31,7 @@ $string['currentversion_column'] = 'Versión actual';
 $string['dependson'] = 'Dependencias';
 $string['downloadtable'] = 'Descargar en formato';
 $string['isitcompatible'] = '¿Compatible con la versión seleccionada?';
+$string['latestversion_column'] = 'Última versión del plugin';
 $string['noinstalledplugins'] = 'No hay plugins externos instalados';
 $string['notcompatible'] = 'No compatible';
 $string['notfound'] = 'No encontrado en el pluglist de Moodle.org';

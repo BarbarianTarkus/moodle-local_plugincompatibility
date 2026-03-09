@@ -104,6 +104,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
                         $bestversionnum = $vnum;
                         $best = (object) [
                             'release' => $ver->release ?? '',
+                            'version' => $ver->version ?? '',
                             'compatible' => true,
                         ];
                     }
@@ -114,7 +115,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
         if ($best !== null) {
             $map[$component] = $best;
         } else {
-            $map[$component] = (object) ['release' => '', 'compatible' => false];
+            $map[$component] = (object) ['release' => '', 'version' => '', 'compatible' => false];
         }
     }
 
@@ -126,7 +127,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
  * Uses Moodle pluglist API 1.3 to determine compatibility.
  *
  * @param string $destinationversion Normalized Moodle version (e.g. "4.5") to check against.
- * @return array List of rows: [plugin_displayname, component_cell, dependencies_string, current_version, compatibility_html].
+ * @return array List of rows: [plugin_displayname, component_cell, dependencies_string, current_version, compatibility_html, latest_version_string].
  */
 function get_installed_plugins(string $destinationversion): array {
     $data = [];
@@ -165,7 +166,8 @@ function get_installed_plugins(string $destinationversion): array {
             }
             $displayname = $pluginfo->displayname !== null && $pluginfo->displayname !== '' ? $pluginfo->displayname : $component;
             $currentversion = !empty($pluginfo->release) ? $pluginfo->release : (string) ($pluginfo->versiondb ?? '');
-            $data[] = [$displayname, $plugincell, $dependencies, $currentversion, $compatible];
+            $latestversion = local_plugincompatibility_latest_version_for_release($component, $compatmap);
+            $data[] = [$displayname, $plugincell, $dependencies, $currentversion, $compatible, $latestversion];
         }
     }
 
@@ -197,9 +199,6 @@ function check_compatible_version(string $version, string $pluginname, array $co
     $info = $compatmap[$pluginname];
     if (!empty($info->compatible)) {
         $text = get_string('compatible', 'local_plugincompatibility');
-        if (!empty($info->release)) {
-            $text .= ' (' . s($info->release) . ')';
-        }
         return \html_writer::tag('span', $text, ['class' => 'local_plugincompatibility-compatible']);
     }
 
@@ -208,6 +207,28 @@ function check_compatible_version(string $version, string $pluginname, array $co
         get_string('notcompatible', 'local_plugincompatibility'),
         ['class' => 'local_plugincompatibility-notcompatible']
     );
+}
+
+/**
+ * Get the latest plugin version string for the given Moodle release (from pluglist).
+ * E.g. "5.0.1 (Build - 2025110900)" or "2025111100" when release is empty.
+ *
+ * @param string $component Plugin component (e.g. "mod_zoom").
+ * @param array $compatmap Map from local_plugincompatibility_pluglist_map_for_release.
+ * @return string Version string or '-' when not found or not compatible.
+ */
+function local_plugincompatibility_latest_version_for_release(string $component, array $compatmap): string {
+    if (!isset($compatmap[$component]) || empty($compatmap[$component]->compatible)) {
+        return '-';
+    }
+    $info = $compatmap[$component];
+    if (!empty($info->release)) {
+        return $info->release;
+    }
+    if (isset($info->version) && $info->version !== '') {
+        return (string) $info->version;
+    }
+    return '-';
 }
 
 /**

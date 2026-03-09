@@ -91,6 +91,7 @@ if ($dataformat) {
         'dependson' => get_string('dependson', 'local_plugincompatibility'),
         'currentversion' => 'Current version',
         'compatibility' => 'Compatibilidad con ' . $version,
+        'latestversion' => 'Latest plugin version',
         'pluginurl' => 'Moodle.org plugin URL',
     ];
     $notfoundstr = get_string('notfound', 'local_plugincompatibility');
@@ -99,7 +100,7 @@ if ($dataformat) {
         $component = strip_tags($row[1]);
         $compatibilitytext = strip_tags($row[4]);
         $pluginurl = ($compatibilitytext === $notfoundstr) ? '' : LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($component);
-        $rows[] = [$row[0], $component, $row[2], $row[3], $compatibilitytext, $pluginurl];
+        $rows[] = [$row[0], $component, $row[2], $row[3], $compatibilitytext, $row[5], $pluginurl];
     }
     $host = parse_url($CFG->wwwroot, PHP_URL_HOST);
     $host = $host ?: 'moodle';
@@ -140,9 +141,10 @@ $table->head = [
     mb_strtoupper(get_string('dependson', 'local_plugincompatibility')),
     mb_strtoupper(get_string('currentversion_column', 'local_plugincompatibility')),
     mb_strtoupper(get_string('compatibility_with_version', 'local_plugincompatibility', $version)),
+    mb_strtoupper(get_string('latestversion_column', 'local_plugincompatibility')),
 ];
-$table->size = ['20%', '20%', '20%', '20%', '20%'];
-$table->align = ['left', 'center', 'center', 'center', 'center'];
+$table->size = ['17%', '17%', '17%', '17%', '16%', '16%'];
+$table->align = ['left', 'center', 'center', 'center', 'center', 'center'];
 $table->data = $data;
 
 echo html_writer::table($table);
