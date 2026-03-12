@@ -243,29 +243,3 @@ function local_plugincompatibility_export_report(string $version, string $datafo
     exit;
 }
 
-/**
- * Extend navigation with Plugin compatibility link.
- *
- * @param \global_navigation $nav
- */
-function local_plugincompatibility_extend_navigation(\global_navigation $nav): void {
-    global $CFG;
-    if (!has_capability('moodle/site:config', \context_system::instance())) {
-        return;
-    }
-    require_once($CFG->libdir . '/environmentlib.php');
-    $currentversion = normalize_version($CFG->release);
-    $parts = explode('.', $currentversion);
-    $major = $parts[0] . '.' . ($parts[1] ?? '0');
-
-    $url = new \moodle_url('/local/plugincompatibility/index.php', ['version' => $major]);
-    $node = $nav->add(
-        get_string('pluginname', 'local_plugincompatibility'),
-        $url,
-        \navigation_node::TYPE_SETTING,
-        null,
-        'local_plugincompatibility_table',
-        new \pix_icon('t/log', '')
-    );
-    $node->showinflatnavigation = true;
-}
