@@ -15,94 +15,257 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
+ * Plugin compatibility library: fetches pluglist from Moodle API and checks installed plugins.
  *
  * @package     local_plugincompatibility
- * @copyright   2020 Raúl Martínez<raulmartinez911@hotmail.com>
+ * @copyright   2020 Raúl Martínez <raulmartinez911@hotmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/** URL of the Moodle pluglist API (all plugins with supported Moodle versions). */
+const LOCAL_PLUGINCOMPATIBILITY_PLUGLIST_URL = 'https://download.moodle.org/api/1.3/pluglist.php';
+
+/** Base URL for plugin versions page on Moodle.org. */
+const LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL = 'https://moodle.org/plugins/pluginversions.php?plugin=';
+
 /**
- * Get installed plugins.
+ * Get cached or fresh pluglist from download.moodle.org API.
  *
- * @param string $destinationversion
- * @return array
+ * @return object|null Decoded JSON with 'plugins' array, or null on failure.
  */
-function get_installed_plugins($destinationversion) {
-    $data = [];
+function local_plugincompatibility_get_pluglist(): ?object {
+    global $CFG;
 
-    $pluginman = core_plugin_manager::instance();
-    $plugininfo = $pluginman->get_plugins();
+    // Raise memory limit before fetching/decoding the large (~15 MB) pluglist JSON.
+    raise_memory_limit(MEMORY_EXTRA);
 
-    foreach ($plugininfo as $plugintype => $pluginnames) {
-        foreach ($pluginnames as $pluginname => $pluginfo) {
-            $dependencies = '-';
-            if (!$pluginfo->is_standard() && !$pluginfo->is_subplugin()) {
-                if ($pluginname !== 'plugincompatibility') {
-                    $pluginnameformatted = $plugintype . '_' . $pluginname;
+    $cache = cache::make('local_plugincompatibility', 'pluglist');
 
-                    if ($pluginfo->dependencies) {
-                        $dependencies = '';
-                        foreach ($pluginfo->dependencies as $kd => $kv) {
-                            $dependencies .= $kd;
-                        }
-                    }
-                    $compatible = check_compatible_version($destinationversion, $pluginnameformatted);
-                    $data[] = [$pluginnameformatted, $dependencies, $compatible];
-                }
-            }
+    // Store the raw JSON string in cache to avoid serialising a huge object tree.
+    $cached = $cache->get('pluglist_json');
+    if ($cached !== false) {
+        $data = json_decode($cached);
+        if ($data !== null && isset($data->plugins) && is_array($data->plugins)) {
+            return $data;
         }
     }
 
+    require_once($CFG->libdir . '/filelib.php');
+    $curl = new \curl();
+    $curl->setopt(['CURLOPT_TIMEOUT' => 30, 'CURLOPT_FOLLOWLOCATION' => true]);
+    $response = $curl->get(LOCAL_PLUGINCOMPATIBILITY_PLUGLIST_URL);
+
+    if ($response === false || $curl->get_errno()) {
+        return null;
+    }
+
+    $data = json_decode($response);
+    if ($data === null || !isset($data->plugins) || !is_array($data->plugins)) {
+        return null;
+    }
+
+    // Cache the raw JSON string.
+    $cache->set('pluglist_json', $response);
     return $data;
 }
 
-
 /**
- * Check compatible version.
+ * Build a map component -> best matching version info for a given Moodle release.
  *
- * @param string $version
- * @param string $pluginname
- * @return string
+ * @param object $pluglist Result from local_plugincompatibility_get_pluglist().
+ * @param string $moodlerelease Normalized target release (e.g. "4.5", "4.4").
+ * @return array Associative array component => object.
  */
-function check_compatible_version($version, $pluginname) {
+function local_plugincompatibility_pluglist_map_for_release(object $pluglist, string $moodlerelease): array {
+    $map = [];
 
-    $html = @file_get_contents("https://moodle.org/plugins/pluginversions.php?plugin=$pluginname");
+    foreach ($pluglist->plugins as $plugin) {
+        $component = $plugin->component ?? null;
+        if (empty($component)) {
+            continue;
+        }
+        $versions = $plugin->versions ?? [];
+        $best = null;
+        $bestversionnum = 0;
 
-    if (!$html) {
-        return html_writer::tag('span', get_string('notfound', 'local_plugincompatibility'), ['style' => 'color:black']);
+        $latestvnum = 0;
+        $latestrelease = '-';
+
+        foreach ($versions as $version) {
+            $vnum = (int) ($version->version ?? 0);
+            if ($vnum > $latestvnum) {
+                $latestvnum = $vnum;
+                $latestrelease = $version->release ?? '-';
+            }
+
+            $supported = $version->supportedmoodles ?? [];
+            foreach ($supported as $sm) {
+                $release = trim($sm->release ?? '');
+                $releasemajor = preg_replace('/^(\d+\.\d+).*$/', '$1', $release);
+                if ($release === $moodlerelease || $releasemajor === $moodlerelease) {
+                    if ($vnum > $bestversionnum) {
+                        $bestversionnum = $vnum;
+                        $best = (object) [
+                            'release' => $version->release ?? '',
+                            'compatible' => true,
+                        ];
+                    }
+                }
+            }
+        }
+
+        if ($best !== null) {
+            $map[$component] = $best;
+        } else {
+            $map[$component] = (object) ['release' => '', 'compatible' => false];
+        }
+        $map[$component]->latestrelease = $latestrelease;
     }
 
-    if (preg_match('/<span class="moodleversions">Moodle.*' . $version . '.*<\/span>/', $html)) {
-        return html_writer::tag('span', get_string('compatible', 'local_plugincompatibility'), ['style' => 'color:green']);
-    }
-    return html_writer::tag('span', get_string('notcompatible', 'local_plugincompatibility'), ['style' => 'color:red']);
+    return $map;
 }
 
+/**
+ * Get raw data of installed plugins and their compatibility.
+ *
+ * @param string $version Normalized Moodle version to check.
+ * @return array Array of plugin info objects.
+ */
+function local_plugincompatibility_get_report_data(string $version): array {
+    $data = [];
+    $pluginman = \core_plugin_manager::instance();
+    $pluglist = local_plugincompatibility_get_pluglist();
+    $compatmap = $pluglist ? local_plugincompatibility_pluglist_map_for_release($pluglist, $version) : [];
+
+    foreach ($pluginman->get_plugins() as $plugintype => $pluginnames) {
+        foreach ($pluginnames as $pluginname => $pluginfo) {
+            if ($pluginfo->is_standard() || $pluginfo->is_subplugin() || $pluginname === 'plugincompatibility') {
+                continue;
+            }
+
+            $component = $plugintype . '_' . $pluginname;
+            $dependencies = !empty($pluginfo->dependencies) ? implode(', ', array_keys($pluginfo->dependencies)) : '-';
+
+            $info = $compatmap[$component] ?? null;
+            $status = $info ? (!empty($info->compatible) ? 'compatible' : 'notcompatible') : 'notfound';
+
+            $data[] = (object) [
+                'name' => $pluginfo->displayname ?: $component,
+                'component' => $component,
+                'dependencies' => $dependencies,
+                'currentversion' => !empty($pluginfo->release) ? $pluginfo->release : (string) ($pluginfo->versiondb ?? ''),
+                'status' => $status,
+                'lastrelease' => $info ? $info->latestrelease : '-',
+                'has_info' => (bool)$info,
+            ];
+        }
+    }
+    return $data;
+}
 
 /**
- * Extend navigation.
+ * Get list of installed plugins with compatibility for a target version, formatted for HTML table.
  *
- * @param global_navigation $nav
+ * @param string $destinationversion Normalized Moodle version.
+ * @return array List of rows.
  */
-function local_plugincompatibility_extend_navigation(global_navigation $nav) {
-    global $CFG;
-    require_once($CFG->libdir . '/environmentlib.php');
+function get_installed_plugins(string $destinationversion): array {
+    $rawdata = local_plugincompatibility_get_report_data($destinationversion);
+    $rows = [];
 
-    $currentversion = normalize_version($CFG->release);
-    $currentversionnominors = explode(".", $currentversion);
-    $currentversionnominors = $currentversionnominors[0] . "." . $currentversionnominors[1];
+    foreach ($rawdata as $plugin) {
+        $plugincell = $plugin->component;
+        if ($plugin->has_info) {
+            $pluginurl = LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($plugin->component);
+            $plugincell = \html_writer::link(
+                $pluginurl,
+                s($plugin->component),
+                ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'local_plugincompatibility-pluginlink']
+            );
+        }
 
-    if (has_capability('moodle/site:config', context_system::instance())) {
-        $managementsectionnode = navigation_node::create(
-            get_string('pluginname', 'local_plugincompatibility'),
-            new moodle_url('/local/plugincompatibility/index.php?version=' . $currentversionnominors),
-            global_navigation::TYPE_CUSTOM,
-            null,
-            'local_plugincompatibility_table',
-            new pix_icon('t/log', '')
+        $compatibilityhtml = \html_writer::tag(
+            'span',
+            get_string($plugin->status, 'local_plugincompatibility'),
+            ['class' => 'local_plugincompatibility-' . $plugin->status]
         );
 
-        $managementsectionnode->showinflatnavigation = true;
-        $nav->add_node($managementsectionnode);
+        $rows[] = [
+            $plugin->name,
+            $plugincell,
+            $plugin->dependencies,
+            $plugin->currentversion,
+            $compatibilityhtml,
+            s($plugin->lastrelease),
+        ];
     }
+    return $rows;
+}
+
+/**
+ * Export compatibility report to a specific data format.
+ *
+ * @param string $version Target Moodle version.
+ * @param string $dataformat Format (e.g. 'csv', 'excel').
+ */
+function local_plugincompatibility_export_report(string $version, string $dataformat): void {
+    global $CFG;
+
+    $rawdata = local_plugincompatibility_get_report_data($version);
+
+    $fields = [
+        'pluginname' => get_string('pluginname_column', 'local_plugincompatibility'),
+        'plugin' => get_string('plugin', 'core'),
+        'dependson' => get_string('dependson', 'local_plugincompatibility'),
+        'currentversion' => get_string('currentversion_column', 'local_plugincompatibility'),
+        'compatibility' => get_string('compatibility_with_version', 'local_plugincompatibility', $version),
+        'pluginurl' => get_string('pluginurl', 'local_plugincompatibility'),
+        'lastrelease' => get_string('lastrelease', 'local_plugincompatibility'),
+    ];
+
+    $rows = [];
+    foreach ($rawdata as $plugin) {
+        $pluginurl = $plugin->has_info ? LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($plugin->component) : '';
+        $rows[] = [
+            $plugin->name,
+            $plugin->component,
+            $plugin->dependencies,
+            $plugin->currentversion,
+            get_string($plugin->status, 'local_plugincompatibility'),
+            $pluginurl,
+            $plugin->lastrelease,
+        ];
+    }
+
+    $host = parse_url($CFG->wwwroot, PHP_URL_HOST) ?: 'moodle';
+    $filename = clean_filename($host . '-version_' . $version);
+    \core\dataformat::download_data($filename, $dataformat, $fields, $rows);
+    exit;
+}
+
+/**
+ * Extend navigation with Plugin compatibility link.
+ *
+ * @param \global_navigation $nav
+ */
+function local_plugincompatibility_extend_navigation(\global_navigation $nav): void {
+    global $CFG;
+    if (!has_capability('moodle/site:config', \context_system::instance())) {
+        return;
+    }
+    require_once($CFG->libdir . '/environmentlib.php');
+    $currentversion = normalize_version($CFG->release);
+    $parts = explode('.', $currentversion);
+    $major = $parts[0] . '.' . ($parts[1] ?? '0');
+
+    $url = new \moodle_url('/local/plugincompatibility/index.php', ['version' => $major]);
+    $node = $nav->add(
+        get_string('pluginname', 'local_plugincompatibility'),
+        $url,
+        \navigation_node::TYPE_SETTING,
+        null,
+        'local_plugincompatibility_table',
+        new \pix_icon('t/log', '')
+    );
+    $node->showinflatnavigation = true;
 }
