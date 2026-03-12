@@ -24,11 +24,10 @@ require_once($CFG->libdir . '/tablelib.php');
  * Table class for plugin compatibility report.
  *
  * @package     local_plugincompatibility
-21:  * @copyright   2020 Raúl Martínez <raulmartinez911@hotmail.com>
+ * @copyright   2020 Raúl Martínez <raulmartinez911@hotmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class compatibility_table extends \flexible_table {
-
     /** @var string Target Moodle version. */
     protected $targetversion;
 

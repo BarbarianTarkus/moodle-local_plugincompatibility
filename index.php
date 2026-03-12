@@ -88,10 +88,12 @@ $data = local_plugincompatibility_get_report_data($version);
 
 // Apply filtering.
 if ($filtersearch !== '' || $filterstatus !== '') {
-    $data = array_filter($data, function($plugin) use ($filtersearch, $filterstatus) {
-        if ($filtersearch !== '' && 
-            stripos($plugin->name, $filtersearch) === false && 
-            stripos($plugin->component, $filtersearch) === false) {
+    $data = array_filter($data, function ($plugin) use ($filtersearch, $filterstatus) {
+        if (
+            $filtersearch !== '' &&
+            stripos($plugin->name, $filtersearch) === false &&
+            stripos($plugin->component, $filtersearch) === false
+        ) {
             return false;
         }
         if ($filterstatus !== '' && $plugin->status !== $filterstatus) {
@@ -138,11 +140,11 @@ echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'version', '
 echo html_writer::div(
     html_writer::label(get_string('search'), 'filter_search', false, ['class' => 'mr-2']) .
     html_writer::empty_tag('input', [
-        'type' => 'text', 
-        'name' => 'filter_search', 
-        'id' => 'filter_search', 
-        'value' => $filtersearch, 
-        'class' => 'form-control mr-3'
+        'type' => 'text',
+        'name' => 'filter_search',
+        'id' => 'filter_search',
+        'value' => $filtersearch,
+        'class' => 'form-control mr-3',
     ]),
     'form-group ml-2'
 );
@@ -155,12 +157,22 @@ $statusoptions = [
 ];
 echo html_writer::div(
     html_writer::label(get_string('status', 'core'), 'filter_status', false, ['class' => 'mr-2']) .
-    html_writer::select($statusoptions, 'filter_status', $filterstatus, false, ['class' => 'form-control mr-3', 'id' => 'filter_status']),
+    html_writer::select(
+        $statusoptions,
+        'filter_status',
+        $filterstatus,
+        false,
+        ['class' => 'form-control mr-3', 'id' => 'filter_status']
+    ),
     'form-group ml-2'
 );
 
 echo html_writer::empty_tag('input', ['type' => 'submit', 'value' => get_string('filter'), 'class' => 'btn btn-primary ml-2']);
-echo html_writer::link($PAGE->url->out(false, ['filter_search' => '', 'filter_status' => '']), get_string('clearall'), ['class' => 'btn btn-secondary ml-2']);
+echo html_writer::link(
+    $PAGE->url->out(false, ['filter_search' => '', 'filter_status' => '']),
+    get_string('clearall'),
+    ['class' => 'btn btn-secondary ml-2']
+);
 echo html_writer::end_tag('form');
 echo $OUTPUT->box_end();
 
@@ -172,11 +184,11 @@ $table->setup();
 // Apply sorting to data.
 $sortcolumns = $table->get_sort_columns();
 if ($sortcolumns) {
-    usort($data, function($a, $b) use ($sortcolumns) {
+    usort($data, function ($a, $b) use ($sortcolumns) {
         foreach ($sortcolumns as $column => $order) {
-            $val_a = $a->$column ?? '';
-            $val_b = $b->$column ?? '';
-            $res = strnatcasecmp($val_a, $val_b);
+            $vala = $a->$column ?? '';
+            $valb = $b->$column ?? '';
+            $res = strnatcasecmp($vala, $valb);
             if ($res !== 0) {
                 return ($order === SORT_ASC) ? $res : -$res;
             }
@@ -186,7 +198,7 @@ if ($sortcolumns) {
 }
 
 foreach ($data as $plugin) {
-    $table->add_data_keyed($plugin);
+    $table->add_data_keyed($table->format_row($plugin));
 }
 
 $table->finish_output();
