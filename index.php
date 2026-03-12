@@ -70,21 +70,44 @@ if (!isset($versions[$version])) {
     $version = $normalizedcurrent;
 }
 
-$PAGE->set_url('/local/plugincompatibility/index.php', ['version' => $version]);
+// Filtering parameters.
+$filtersearch = optional_param('filter_search', '', PARAM_TEXT);
+$filterstatus = optional_param('filter_status', '', PARAM_ALPHA);
+
+$PAGE->set_url('/local/plugincompatibility/index.php', [
+    'version'       => $version,
+    'filter_search' => $filtersearch,
+    'filter_status' => $filterstatus,
+]);
 $PAGE->set_context(context_system::instance());
 $PAGE->requires->css('/local/plugincompatibility/styles.css');
 $PAGE->set_title(get_string('pluginname', 'local_plugincompatibility'));
 $PAGE->set_heading(get_string('pluginname', 'local_plugincompatibility'));
 
-$data = get_installed_plugins($version);
+$data = local_plugincompatibility_get_report_data($version);
+
+// Apply filtering.
+if ($filtersearch !== '' || $filterstatus !== '') {
+    $data = array_filter($data, function($plugin) use ($filtersearch, $filterstatus) {
+        if ($filtersearch !== '' && 
+            stripos($plugin->name, $filtersearch) === false && 
+            stripos($plugin->component, $filtersearch) === false) {
+            return false;
+        }
+        if ($filterstatus !== '' && $plugin->status !== $filterstatus) {
+            return false;
+        }
+        return true;
+    });
+}
 
 if ($dataformat) {
-    local_plugincompatibility_export_report($version, $dataformat);
+    local_plugincompatibility_export_report($version, $dataformat, $data);
 }
 
 echo $OUTPUT->header();
 
-if (empty($data)) {
+if (empty($data) && $filtersearch === '' && $filterstatus === '') {
     echo $OUTPUT->notification(
         get_string('noinstalledplugins', 'local_plugincompatibility'),
         \core\output\notification::NOTIFY_WARNING
@@ -93,8 +116,8 @@ if (empty($data)) {
     exit;
 }
 
-$output = $OUTPUT->box_start();
-$output .= html_writer::tag('div', get_string('targetversion_help', 'local_plugincompatibility'));
+$output = $OUTPUT->box_start('generalbox mt-3 mb-3');
+$output .= html_writer::tag('div', get_string('targetversion_help', 'local_plugincompatibility'), ['class' => 'mb-2']);
 $select = new single_select(
     new moodle_url('/local/plugincompatibility/index.php'),
     'version',
@@ -107,24 +130,71 @@ $output .= $OUTPUT->render($select);
 $output .= $OUTPUT->box_end();
 echo $output;
 
-$table = new html_table();
-$table->head = [
-    mb_strtoupper(get_string('pluginname_column', 'local_plugincompatibility')),
-    mb_strtoupper(get_string('plugin', 'core')),
-    mb_strtoupper(get_string('dependson', 'local_plugincompatibility')),
-    mb_strtoupper(get_string('currentversion_column', 'local_plugincompatibility')),
-    mb_strtoupper(get_string('compatibility_with_version', 'local_plugincompatibility', $version)),
-    mb_strtoupper(get_string('lastrelease', 'local_plugincompatibility')),
-];
-$table->size = ['20%', '20%', '20%', '20%', '20%', '20%'];
-$table->align = ['left', 'center', 'center', 'center', 'center', 'center'];
-$table->data = $data;
+// Filter form.
+echo $OUTPUT->box_start('generalbox mb-3');
+echo html_writer::start_tag('form', ['method' => 'get', 'action' => $PAGE->url, 'class' => 'form-inline']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'version', 'value' => $version]);
 
-echo html_writer::table($table);
+echo html_writer::div(
+    html_writer::label(get_string('search'), 'filter_search', false, ['class' => 'mr-2']) .
+    html_writer::empty_tag('input', [
+        'type' => 'text', 
+        'name' => 'filter_search', 
+        'id' => 'filter_search', 
+        'value' => $filtersearch, 
+        'class' => 'form-control mr-3'
+    ]),
+    'form-group ml-2'
+);
+
+$statusoptions = [
+    '' => get_string('all'),
+    'compatible' => get_string('compatible', 'local_plugincompatibility'),
+    'notcompatible' => get_string('notcompatible', 'local_plugincompatibility'),
+    'notfound' => get_string('notfound', 'local_plugincompatibility'),
+];
+echo html_writer::div(
+    html_writer::label(get_string('status', 'core'), 'filter_status', false, ['class' => 'mr-2']) .
+    html_writer::select($statusoptions, 'filter_status', $filterstatus, false, ['class' => 'form-control mr-3', 'id' => 'filter_status']),
+    'form-group ml-2'
+);
+
+echo html_writer::empty_tag('input', ['type' => 'submit', 'value' => get_string('filter'), 'class' => 'btn btn-primary ml-2']);
+echo html_writer::link($PAGE->url->out(false, ['filter_search' => '', 'filter_status' => '']), get_string('clearall'), ['class' => 'btn btn-secondary ml-2']);
+echo html_writer::end_tag('form');
+echo $OUTPUT->box_end();
+
+$table = new \local_plugincompatibility\table\compatibility_table('plugin_compat_report', $version);
+$table->define_baseurl($PAGE->url);
+
+$table->setup();
+
+// Apply sorting to data.
+$sortcolumns = $table->get_sort_columns();
+if ($sortcolumns) {
+    usort($data, function($a, $b) use ($sortcolumns) {
+        foreach ($sortcolumns as $column => $order) {
+            $val_a = $a->$column ?? '';
+            $val_b = $b->$column ?? '';
+            $res = strnatcasecmp($val_a, $val_b);
+            if ($res !== 0) {
+                return ($order === SORT_ASC) ? $res : -$res;
+            }
+        }
+        return 0;
+    });
+}
+
+foreach ($data as $plugin) {
+    $table->add_data_keyed($plugin);
+}
+
+$table->finish_output();
+
 echo $OUTPUT->download_dataformat_selector(
     get_string('downloadtable', 'local_plugincompatibility'),
     $PAGE->url->out_omit_querystring(),
     'dataformat',
-    ['version' => $version]
+    ['version' => $version, 'filter_search' => $filtersearch, 'filter_status' => $filterstatus]
 );
 echo $OUTPUT->footer();
