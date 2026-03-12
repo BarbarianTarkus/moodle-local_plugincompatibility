@@ -20,13 +20,32 @@ Data is taken from **https://download.moodle.org/api/1.3/pluglist.php** (cached 
 
 ## Installation
 
-1. Copy the `plugincompatibility` folder into `local/`.
-2. Visit **Site administration → Notifications** and complete the upgrade.
+### Manual Installation
+1. Manually download last release from [GitHub Releases](https://github.com/BarbarianTarkus/moodle-local_plugincompatibility/releases).
+2. Unzip the file.
+3. Copy the `plugincompatibility` folder into `local/`.
+4. Visit **Site administration → Notifications** and complete the upgrade.
+
+### Clone repo
+
+#### On Moodle <4.XX
+```bash
+cd ${MOODLE_DIR}
+git clone https://github.com/xyulex/moodle-local_plugincompatibility.git local/plugincompatibility
+cd local/plugincompatibility
+```
+
+#### On Moodle 5.XX+
+```bash
+cd ${MOODLE_DIR/public}
+git clone https://github.com/xyulex/moodle-local_plugincompatibility.git local/plugincompatibility
+cd local/plugincompatibility
+```
 
 ## Usage
 
-- Go to **Site administration → Plugin compatibility** (or **/local/plugincompatibility/index.php**).
-- Choose the **Moodle version** you want to check (e.g. 4.5).
+- Go to **Site administration -> Plugins -> Plugin compatibility** (or **/local/plugincompatibility/index.php**).
+- Choose the **Moodle version** you want to check (e.g. 4.5, 5.1).
 - The table shows each installed plugin and its compatibility for that version.
 - Use the download selector to export the table (e.g. CSV).
 
