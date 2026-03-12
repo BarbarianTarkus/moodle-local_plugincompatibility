@@ -23,7 +23,7 @@
  */
 
 /** URL of the Moodle pluglist API (all plugins with supported Moodle versions). */
-const LOCAL_PLUGINCOMPATIBILITY_PLUGLIST_URL = 'https://download.moodle.org/api/1.3/pluglist.php';
+const LOCAL_PLUGINCOMPATIBILITY_PLUGLIST_URL = \core\update\api::APIROOT . '/' . \core\update\api::APIVER . '/pluglist.php';
 
 /** Base URL for plugin versions page on Moodle.org. */
 const LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL = 'https://moodle.org/plugins/pluginversions.php?plugin=';
