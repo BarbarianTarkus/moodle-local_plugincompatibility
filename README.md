@@ -2,6 +2,8 @@
 
 This plugin checks your **installed third‑party plugins** against the official Moodle plugins directory to see whether a version is available for a given Moodle release (e.g. 4.5). It helps plan upgrades: you can select a target Moodle version and see which of your plugins are listed as compatible on Moodle.org.
 
+<img width="1890" height="847" alt="Screenshot of plugin" src="https://github.com/user-attachments/assets/5aee0430-b926-4432-acb5-b3c198ddd80d" />
+
 ## What it does
 
 - Lists all **non‑core** plugins installed on your site (by component: `mod_zoom`, `block_foo`, etc.).
