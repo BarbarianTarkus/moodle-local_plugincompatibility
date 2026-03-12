@@ -150,7 +150,7 @@ function local_plugincompatibility_get_report_data(string $version): array {
             $info = $compatmap[$component] ?? null;
             $status = $info ? (!empty($info->compatible) ? 'compatible' : 'notcompatible') : 'notfound';
 
-            $currentversion = (!empty($pluginfo->release) ? $pluginfo->release : '-') . '<br>(' . ($pluginfo->versiondb ?? '') . ')';
+            $currentversion = (!empty($pluginfo->release) ? $pluginfo->release : '-') . ' (' . ($pluginfo->versiondb ?? '') . ')';
             $data[] = (object) [
                 'name' => $pluginfo->displayname ?: $component,
                 'component' => $component,
@@ -167,55 +167,20 @@ function local_plugincompatibility_get_report_data(string $version): array {
     return $data;
 }
 
-/**
- * Get list of installed plugins with compatibility for a target version, formatted for HTML table.
- *
- * @param string $destinationversion Normalized Moodle version.
- * @return array List of rows.
- */
-function get_installed_plugins(string $destinationversion): array {
-    $rawdata = local_plugincompatibility_get_report_data($destinationversion);
-    $rows = [];
-
-    foreach ($rawdata as $plugin) {
-        $plugincell = $plugin->component;
-        if ($plugin->has_info) {
-            $pluginurl = LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($plugin->component);
-            $plugincell = \html_writer::link(
-                $pluginurl,
-                s($plugin->component),
-                ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'local_plugincompatibility-pluginlink']
-            );
-        }
-
-        $compatibilityhtml = \html_writer::tag(
-            'span',
-            get_string($plugin->status, 'local_plugincompatibility'),
-            ['class' => 'local_plugincompatibility-' . $plugin->status]
-        );
-
-        $rows[] = [
-            $plugin->name,
-            $plugincell,
-            $plugin->dependencies,
-            $plugin->currentversion,
-            $compatibilityhtml,
-            s($plugin->lastrelease),
-        ];
-    }
-    return $rows;
-}
 
 /**
  * Export compatibility report to a specific data format.
  *
  * @param string $version Target Moodle version.
  * @param string $dataformat Format (e.g. 'csv', 'excel').
+ * @param array|null $rawdata Optional pre-filtered data.
  */
-function local_plugincompatibility_export_report(string $version, string $dataformat): void {
+function local_plugincompatibility_export_report(string $version, string $dataformat, ?array $rawdata = null): void {
     global $CFG;
 
-    $rawdata = local_plugincompatibility_get_report_data($version);
+    if ($rawdata === null) {
+        $rawdata = local_plugincompatibility_get_report_data($version);
+    }
 
     $fields = [
         'pluginname' => get_string('pluginname_column', 'local_plugincompatibility'),
