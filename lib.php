@@ -95,7 +95,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
             $vnum = (int) ($version->version ?? 0);
             if ($vnum > $latestvnum) {
                 $latestvnum = $vnum;
-                $latestrelease = $version->release ?? '-';
+                $latestrelease = ($version->release ?? '-') . ' (' . ($version->version ?? '') . ')';
             }
 
             $supported = $version->supportedmoodles ?? [];
@@ -107,6 +107,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
                         $bestversionnum = $vnum;
                         $best = (object) [
                             'release' => $version->release ?? '',
+                            'version' => $version->version ?? '',
                             'compatible' => true,
                         ];
                     }
@@ -117,7 +118,7 @@ function local_plugincompatibility_pluglist_map_for_release(object $pluglist, st
         if ($best !== null) {
             $map[$component] = $best;
         } else {
-            $map[$component] = (object) ['release' => '', 'compatible' => false];
+            $map[$component] = (object) ['release' => '', 'version' => '', 'compatible' => false];
         }
         $map[$component]->latestrelease = $latestrelease;
     }
@@ -149,12 +150,15 @@ function local_plugincompatibility_get_report_data(string $version): array {
             $info = $compatmap[$component] ?? null;
             $status = $info ? (!empty($info->compatible) ? 'compatible' : 'notcompatible') : 'notfound';
 
+            $currentversion = (!empty($pluginfo->release) ? $pluginfo->release : '-') . '<br>(' . ($pluginfo->versiondb ?? '') . ')';
             $data[] = (object) [
                 'name' => $pluginfo->displayname ?: $component,
                 'component' => $component,
                 'dependencies' => $dependencies,
-                'currentversion' => !empty($pluginfo->release) ? $pluginfo->release : (string) ($pluginfo->versiondb ?? ''),
+                'currentversion' => $currentversion,
                 'status' => $status,
+                'compatrelease' => $info->release ?? '',
+                'compatversion' => $info->version ?? '',
                 'lastrelease' => $info ? $info->latestrelease : '-',
                 'has_info' => (bool)$info,
             ];
@@ -226,12 +230,13 @@ function local_plugincompatibility_export_report(string $version, string $datafo
     $rows = [];
     foreach ($rawdata as $plugin) {
         $pluginurl = $plugin->has_info ? LOCAL_PLUGINCOMPATIBILITY_MOODLEORG_VERSIONS_URL . urlencode($plugin->component) : '';
+        $statuslabel = get_string($plugin->status, 'local_plugincompatibility');
         $rows[] = [
             $plugin->name,
             $plugin->component,
             $plugin->dependencies,
             $plugin->currentversion,
-            get_string($plugin->status, 'local_plugincompatibility'),
+            $statuslabel,
             $pluginurl,
             $plugin->lastrelease,
         ];
@@ -242,4 +247,3 @@ function local_plugincompatibility_export_report(string $version, string $datafo
     \core\dataformat::download_data($filename, $dataformat, $fields, $rows);
     exit;
 }
-
