@@ -25,11 +25,19 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['compatibility_with_version'] = 'Compatibilidad con {$a}';
 $string['compatible'] = 'Compatible';
-$string['dependson'] = 'Dependencias ';
+$string['currentversion_column'] = 'Versión actual';
+$string['dependson'] = 'Dependencias';
 $string['downloadtable'] = 'Descargar en formato';
-$string['isitcompatible'] = '¿Es compatible con la nueva versión?';
-$string['noinstalledplugins'] = 'No existen plugins externos instalados';
+$string['isitcompatible'] = '¿Compatible con la versión seleccionada?';
+$string['lastrelease'] = 'Última versión';
+$string['noinstalledplugins'] = 'No hay plugins externos instalados';
 $string['notcompatible'] = 'No compatible';
-$string['notfound'] = 'No existe en el repositorio de Moodle.org';
-$string['pluginname'] = 'Plugin compatibility';
+$string['notfound'] = 'No encontrado en el pluglist de Moodle.org';
+$string['pluginname'] = 'Compatibilidad de plugins';
+$string['pluginname_column'] = 'Nombre del plugin';
+$string['pluginurl'] = 'URL del plugin en Moodle.org';
+$string['privacy:metadata'] = 'El plugin de compatibilidad de plugins no almacena datos personales. Solo obtiene datos públicos de la API de download.moodle.org.';
+$string['targetversion'] = 'Versión de Moodle a comprobar';
+$string['targetversion_help'] = 'Selecciona la versión de Moodle con la que comprobar compatibilidad. Tus plugins instalados se compararán con el pluglist de Moodle.org para esta versión.';
