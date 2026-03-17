@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
+    require_once($CFG->libdir . '/environmentlib.php');
     $currentversion = normalize_version($CFG->release);
     $parts = explode('.', $currentversion);
     $major = $parts[0] . '.' . ($parts[1] ?? '0');
