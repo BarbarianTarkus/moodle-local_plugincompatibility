@@ -138,13 +138,26 @@ function local_plugincompatibility_get_report_data(string $version): array {
     $pluglist = local_plugincompatibility_get_pluglist();
     $compatmap = $pluglist ? local_plugincompatibility_pluglist_map_for_release($pluglist, $version) : [];
 
+    // Moodle Workplace bundles a set of plugins that are part of the Workplace package (not third-party).
+    // Exclude them from this report when running on Workplace so they don't show as "not found" on Moodle.org.
+    $workplaceplugins = [];
+    if (class_exists('\tool_wp\workplace')) {
+        $workplaceplugins = \tool_wp\workplace::workplace_plugins();
+    }
+
     foreach ($pluginman->get_plugins() as $plugintype => $pluginnames) {
         foreach ($pluginnames as $pluginname => $pluginfo) {
-            if ($pluginfo->is_standard() || $pluginfo->is_subplugin() || $pluginname === 'plugincompatibility') {
+            $component = $plugintype . '_' . $pluginname;
+
+            if (
+                $pluginfo->is_standard() ||
+                $pluginfo->is_subplugin() ||
+                $pluginname === 'plugincompatibility' ||
+                (!empty($workplaceplugins) && in_array($component, $workplaceplugins, true))
+            ) {
                 continue;
             }
 
-            $component = $plugintype . '_' . $pluginname;
             $dependencies = !empty($pluginfo->dependencies) ? implode(', ', array_keys($pluginfo->dependencies)) : '-';
 
             $info = $compatmap[$component] ?? null;
