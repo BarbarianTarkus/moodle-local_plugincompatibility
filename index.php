@@ -58,6 +58,9 @@ foreach ($knownfuturemajors as $major) {
         $versions[$major] = $major;
     }
 }
+if (!isset($versions[$normalizedcurrent])) {
+    $versions[$normalizedcurrent] = $normalizedcurrent;
+}
 uksort($versions, function ($a, $b) {
     return version_compare($a, $b);
 });
