@@ -35,6 +35,11 @@ if (!has_capability('moodle/site:config', context_system::instance())) {
 
 $currentversion = $CFG->release;
 $normalizedcurrent = normalize_version($currentversion);
+// Ensure we only have major.minor (e.g., 5.1 instead of 5.1.0).
+$parts = explode('.', $normalizedcurrent);
+if (count($parts) > 2) {
+    $normalizedcurrent = $parts[0] . '.' . $parts[1];
+}
 $destinationversion = optional_param('version', $normalizedcurrent, PARAM_TEXT);
 $dataformat = optional_param('dataformat', '', PARAM_ALPHA);
 
@@ -46,6 +51,11 @@ if ($contents = load_environment_xml()) {
         foreach ($envversions as $envver) {
             if ($envver === 'all') {
                 continue;
+            }
+            // Normalize environment version to major.minor as well.
+            $envparts = explode('.', $envver);
+            if (count($envparts) > 2) {
+                $envver = $envparts[0] . '.' . $envparts[1];
             }
             if (version_compare($envver, $normalizedcurrent, '>=')) {
                 $versions[$envver] = $envver;
