@@ -46,6 +46,8 @@ class compatibility_table extends \flexible_table {
             'component',
             'dependencies',
             'currentversion',
+            'activestatus',
+            'instances',
             'status',
             'lastrelease',
         ];
@@ -54,6 +56,8 @@ class compatibility_table extends \flexible_table {
             get_string('plugin', 'core'),
             get_string('dependson', 'local_plugincompatibility'),
             get_string('currentversion_column', 'local_plugincompatibility'),
+            get_string('active_column', 'local_plugincompatibility'),
+            get_string('instances_column', 'local_plugincompatibility'),
             get_string('compatibility_with_version', 'local_plugincompatibility', $targetversion),
             get_string('lastrelease', 'local_plugincompatibility'),
         ];
@@ -127,6 +131,26 @@ class compatibility_table extends \flexible_table {
      */
     public function col_currentversion($row) {
         return s($row->currentversion);
+    }
+
+    /**
+     * Format activestatus column.
+     *
+     * @param \stdClass $row
+     * @return string
+     */
+    public function col_activestatus($row) {
+        return s(get_string($row->activestatus, 'local_plugincompatibility'));
+    }
+
+    /**
+     * Format instances column.
+     *
+     * @param \stdClass $row
+     * @return string
+     */
+    public function col_instances($row) {
+        return $row->instances === null ? '-' : (string) (int) $row->instances;
     }
 
     /**

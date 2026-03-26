@@ -162,6 +162,16 @@ function local_plugincompatibility_get_report_data(string $version): array {
 
             $info = $compatmap[$component] ?? null;
             $status = $info ? (!empty($info->compatible) ? 'compatible' : 'notcompatible') : 'notfound';
+            $enabled = $pluginfo->is_enabled();
+            if ($enabled === true) {
+                $activestatus = 'active';
+            } else if ($enabled === false) {
+                $activestatus = 'inactive';
+            } else {
+                // Plugin types without enable/disable switch cannot be determined in a generic way.
+                $activestatus = 'unknown';
+            }
+            $instances = local_plugincompatibility_get_plugin_instances_count($plugintype, $pluginname);
 
             $currentversion = (!empty($pluginfo->release) ? $pluginfo->release : '-') . ' (' . ($pluginfo->versiondb ?? '') . ')';
             $data[] = (object) [
@@ -174,10 +184,59 @@ function local_plugincompatibility_get_report_data(string $version): array {
                 'compatversion' => $info->version ?? '',
                 'lastrelease' => $info ? $info->latestrelease : '-',
                 'has_info' => (bool)$info,
+                'activestatus' => $activestatus,
+                'instances' => $instances,
             ];
         }
     }
     return $data;
+}
+
+/**
+ * Get number of instances/usages for plugin types where this can be measured generically.
+ *
+ * Returns null when the metric is not applicable for the plugin type.
+ *
+ * @param string $plugintype
+ * @param string $pluginname
+ * @return int|null
+ */
+function local_plugincompatibility_get_plugin_instances_count(string $plugintype, string $pluginname): ?int {
+    global $DB;
+
+    switch ($plugintype) {
+        case 'mod':
+            if (!$moduleid = $DB->get_field('modules', 'id', ['name' => $pluginname])) {
+                return 0;
+            }
+            return (int) $DB->count_records('course_modules', ['module' => $moduleid, 'deletioninprogress' => 0]);
+
+        case 'block':
+            return (int) $DB->count_records('block_instances', ['blockname' => $pluginname]);
+
+        case 'enrol':
+            return (int) $DB->count_records('enrol', ['enrol' => $pluginname]);
+
+        case 'auth':
+            $authsenabled = get_enabled_auth_plugins();
+            return in_array($pluginname, $authsenabled, true) ? 1 : 0;
+
+        case 'format':
+            return (int) $DB->count_records('course', ['format' => $pluginname]);
+
+        case 'theme':
+            // Count explicit course overrides only.
+            $instances = (int) $DB->count_records('course', ['theme' => $pluginname]);
+            $sitedefaulttheme = get_config('core', 'theme');
+            if ($sitedefaulttheme === $pluginname) {
+                // Add one usage for being the site default theme.
+                $instances++;
+            }
+            return $instances;
+
+        default:
+            return null;
+    }
 }
 
 
@@ -200,6 +259,8 @@ function local_plugincompatibility_export_report(string $version, string $datafo
         'plugin' => get_string('plugin', 'core'),
         'dependson' => get_string('dependson', 'local_plugincompatibility'),
         'currentversion' => get_string('currentversion_column', 'local_plugincompatibility'),
+        'activestatus' => get_string('active_column', 'local_plugincompatibility'),
+        'instances' => get_string('instances_column', 'local_plugincompatibility'),
         'compatibility' => get_string('compatibility_with_version', 'local_plugincompatibility', $version),
         'pluginurl' => get_string('pluginurl', 'local_plugincompatibility'),
         'lastrelease' => get_string('lastrelease', 'local_plugincompatibility'),
@@ -214,6 +275,8 @@ function local_plugincompatibility_export_report(string $version, string $datafo
             $plugin->component,
             $plugin->dependencies,
             $plugin->currentversion,
+            get_string($plugin->activestatus, 'local_plugincompatibility'),
+            $plugin->instances ?? '-',
             $statuslabel,
             $pluginurl,
             $plugin->lastrelease,
